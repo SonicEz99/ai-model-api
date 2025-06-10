@@ -1,27 +1,34 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import JSONResponse
 import os
 import uuid
+from fastapi import FastAPI, UploadFile, File, HTTPException, Header
+from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
+from model import model_inference
 
-app = FastAPI()
+load_dotenv()  # Load env variables from .env
+
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+API_KEY = os.getenv("API_KEY")
+
+app = FastAPI(debug=DEBUG)
+
+def verify_api_key(x_api_key: str | None):
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
 
 @app.post("/detect")
-async def detect(image: UploadFile = File(...)):
+async def detect(image: UploadFile = File(...), x_api_key: str | None = Header(None)):
+    verify_api_key(x_api_key)
+
     try:
-        # Save uploaded image temporarily
-        temp_dir = "temp"
-        os.makedirs(temp_dir, exist_ok=True)
-        filename = f"{uuid.uuid4()}_{image.filename}"
-        file_path = os.path.join(temp_dir, filename)
+        # We just want to check if the file name exists inside /models folder,
+        # so no need to save the file permanently.
+        # But you can optionally save if needed.
 
-        with open(file_path, "wb") as f:
-            content = await image.read()
-            f.write(content)
+        filename = image.filename
 
-        # TODO: Replace this with actual model inference
-        result = {"prediction": "cat", "confidence": 0.92}
+        result = model_inference(filename)
 
-        os.remove(file_path)  # Clean up
         return JSONResponse(content=result)
 
     except Exception as e:
