@@ -1,35 +1,31 @@
-import os
-import uuid
-from fastapi import FastAPI, UploadFile, File, HTTPException, Header
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import shutil
 from model import model_inference
 
-load_dotenv()  # Load env variables from .env
+app = FastAPI()
 
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
-API_KEY = os.getenv("API_KEY")
+# CORS setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace with your domain(s) in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app = FastAPI(debug=DEBUG)
-
-def verify_api_key(x_api_key: str | None):
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API Key")
+MODEL_DIR = os.getenv("MODEL_DIR", "./models")
+os.makedirs(MODEL_DIR, exist_ok=True)
 
 @app.post("/detect")
-async def detect(image: UploadFile = File(...), x_api_key: str | None = Header(None)):
-    verify_api_key(x_api_key)
+async def detect(image: UploadFile = File(...)):
+    save_path = os.path.join(MODEL_DIR, image.filename)
 
-    try:
-        # We just want to check if the file name exists inside /models folder,
-        # so no need to save the file permanently.
-        # But you can optionally save if needed.
+    # Save uploaded image to ./models/
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(image.file, buffer)
 
-        filename = image.filename
-
-        result = model_inference(filename)
-
-        return JSONResponse(content=result)
-
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=500)
+    result = model_inference(image.filename)
+    return JSONResponse(content=result)
