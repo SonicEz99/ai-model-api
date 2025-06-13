@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,10 +8,9 @@ from model import model_inference
 
 app = FastAPI()
 
-# CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace with your domain(s) in production
+    allow_origins=["*"],  # ใช้ใน dev เท่านั้น
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,7 +23,6 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 async def detect(image: UploadFile = File(...)):
     save_path = os.path.join(MODEL_DIR, image.filename)
 
-    # Save uploaded image to ./models/
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
 
