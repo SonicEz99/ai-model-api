@@ -4,7 +4,7 @@ import cv2
 import os
 
 # โหลดโมเดลเพียงครั้งเดียว
-model = YOLO(r"C:\Users\User\Desktop\ai-model-api\best.pt")
+model = YOLO("./best.pt")
 
 def model_inference(filename: str):
     file_path = os.path.join("models", filename)
